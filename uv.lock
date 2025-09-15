@@ -292,7 +292,7 @@ dependencies = [
     { name = "sqlalchemy", extra = ["mypy"] },
     { name = "uuid6" },
     { name = "uvicorn" },
-    { name = "uvloop" },
+#    { name = "uvloop" },
 ]
 
 [package.optional-dependencies]

@@ -1,5 +1,5 @@
 import dishka.plotter
-import uvloop
+import asyncio
 from dishka import AsyncContainer, make_async_container
 
 from app.setup.config.settings import AppSettings, load_settings
@@ -26,4 +26,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    uvloop.run(main())
+    asyncio.run(main())
