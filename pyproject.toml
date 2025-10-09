@@ -27,21 +27,20 @@ dependencies = [
     "fastapi==0.116.1",
     "orjson==3.11.0",
     "psycopg[binary]==3.2.9",
-    "pydantic[email]==2.11.7",
     "pyjwt[crypto]==2.10.1",
-    "rtoml==0.12.0",
     "sqlalchemy[mypy]==2.0.41",
-    "uuid6==2025.0.1",
     "uvicorn==0.35.0",
-#    "uvloop==0.21.0",
+    "uvloop==0.21.0",
+    "uuid-utils==0.11.1",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "mypy==1.17.0",
     "pre-commit==4.2.0",
     "ruff==0.12.5",
     "slotscheck==0.19.1",
+    { include-group = "test" },
 ]
 test = [
     "coverage==7.10.0",
@@ -175,7 +174,7 @@ split-on-trailing-comma = true
 ]
 #
 "src/app/infrastructure/adapters/password_hasher_bcrypt.py" = ["E501", ]  # line-too-long
-"src/app/infrastructure/auth/session/constants.py" = ["S105", ]           # hardcoded-password-string
+"src/app/infrastructure/auth/handlers/constants.py" = ["S105", ]          # hardcoded-password-string
 "src/app/presentation/http/auth/constants.py" = ["S105", ]                # hardcoded-password-string
 "src/app/presentation/http/errors/translators.py" = ["ARG002", ]          # unused-method-argument
 "scripts/dishka/plot_dependencies_data.py" = ["T201", ]                   # print

@@ -1,5 +1,6 @@
 from inspect import getdoc
 from typing import Annotated
+from uuid import UUID
 
 from dishka import FromDishka
 from dishka.integrations.fastapi import inject
@@ -11,10 +12,9 @@ from app.application.commands.activate_user import (
     ActivateUserRequest,
 )
 from app.application.common.exceptions.authorization import AuthorizationError
-from app.domain.exceptions.base import DomainFieldError
 from app.domain.exceptions.user import (
     ActivationChangeNotPermittedError,
-    UserNotFoundByUsernameError,
+    UserNotFoundByIdError,
 )
 from app.infrastructure.auth.exceptions import AuthenticationError
 from app.infrastructure.exceptions.gateway import DataMapperError
@@ -28,8 +28,8 @@ from app.presentation.http.errors.translators import (
 def create_activate_user_router() -> APIRouter:
     router = ErrorAwareRouter()
 
-    @router.patch(
-        "/{username}/activate",
+    @router.put(
+        "/{user_id}/activation",
         description=getdoc(ActivateUserInteractor),
         error_map={
             AuthenticationError: status.HTTP_401_UNAUTHORIZED,
@@ -39,8 +39,7 @@ def create_activate_user_router() -> APIRouter:
                 on_error=log_error,
             ),
             AuthorizationError: status.HTTP_403_FORBIDDEN,
-            DomainFieldError: status.HTTP_400_BAD_REQUEST,
-            UserNotFoundByUsernameError: status.HTTP_404_NOT_FOUND,
+            UserNotFoundByIdError: status.HTTP_404_NOT_FOUND,
             ActivationChangeNotPermittedError: status.HTTP_403_FORBIDDEN,
         },
         default_on_error=log_info,
@@ -49,10 +48,10 @@ def create_activate_user_router() -> APIRouter:
     )
     @inject
     async def activate_user(
-        username: Annotated[str, Path()],
+        user_id: Annotated[UUID, Path()],
         interactor: FromDishka[ActivateUserInteractor],
     ) -> None:
-        request_data = ActivateUserRequest(username)
+        request_data = ActivateUserRequest(user_id)
         await interactor.execute(request_data)
 
     return router

@@ -1,16 +1,9 @@
 import logging
 from datetime import datetime
+from typing import Final
 
 from app.domain.value_objects.user_id import UserId
 from app.infrastructure.auth.exceptions import AuthenticationError
-from app.infrastructure.auth.session.constants import (
-    AUTH_IS_UNAVAILABLE,
-    AUTH_NOT_AUTHENTICATED,
-    AUTH_SESSION_EXPIRED,
-    AUTH_SESSION_EXTENSION_FAILED,
-    AUTH_SESSION_EXTRACTION_FAILED,
-    AUTH_SESSION_NOT_FOUND,
-)
 from app.infrastructure.auth.session.id_generator_str import (
     StrAuthSessionIdGenerator,
 )
@@ -27,6 +20,15 @@ from app.infrastructure.exceptions.gateway import DataMapperError
 
 log = logging.getLogger(__name__)
 
+AUTH_UNAVAILABLE: Final[str] = (
+    "Authentication is currently unavailable. Please try again later."
+)
+AUTH_NOT_AUTHENTICATED: Final[str] = "Not authenticated."
+AUTH_SESSION_EXPIRED: Final[str] = "Auth session expired."
+AUTH_SESSION_EXTENSION_FAILED: Final[str] = "Auth session extension failed."
+AUTH_SESSION_EXTRACTION_FAILED: Final[str] = "Auth session extraction failed."
+AUTH_SESSION_NOT_FOUND: Final[str] = "Auth session not found."
+
 
 class AuthSessionService:
     def __init__(
@@ -36,7 +38,7 @@ class AuthSessionService:
         auth_transaction_manager: AuthSessionTransactionManager,
         auth_session_id_generator: StrAuthSessionIdGenerator,
         auth_session_timer: UtcAuthSessionTimer,
-    ):
+    ) -> None:
         self._auth_session_gateway = auth_session_gateway
         self._auth_session_transport = auth_session_transport
         self._auth_transaction_manager = auth_transaction_manager
@@ -48,7 +50,7 @@ class AuthSessionService:
         """:raises AuthenticationError:"""
         log.debug("Issue auth session: started. User ID: '%s'.", user_id.value)
 
-        auth_session_id: str = self._auth_session_id_generator()
+        auth_session_id: str = self._auth_session_id_generator.generate()
         expiration: datetime = self._auth_session_timer.auth_session_expiration
         auth_session = AuthSession(
             id_=auth_session_id,
@@ -60,8 +62,8 @@ class AuthSessionService:
             self._auth_session_gateway.add(auth_session)
             await self._auth_transaction_manager.commit()
 
-        except DataMapperError as error:
-            raise AuthenticationError(AUTH_IS_UNAVAILABLE) from error
+        except DataMapperError as err:
+            raise AuthenticationError(AUTH_UNAVAILABLE) from err
 
         self._auth_session_transport.deliver(auth_session)
 
@@ -178,9 +180,9 @@ class AuthSessionService:
                 AuthSession | None
             ) = await self._auth_session_gateway.read_by_id(auth_session_id)
 
-        except DataMapperError as error:
-            log.error("%s: '%s'", AUTH_SESSION_EXTRACTION_FAILED, error)
-            raise AuthenticationError(AUTH_NOT_AUTHENTICATED) from error
+        except DataMapperError as err:
+            log.error("%s: '%s'", AUTH_SESSION_EXTRACTION_FAILED, err)
+            raise AuthenticationError(AUTH_NOT_AUTHENTICATED) from err
 
         if auth_session is None:
             log.debug(AUTH_SESSION_NOT_FOUND)
@@ -224,8 +226,8 @@ class AuthSessionService:
             await self._auth_session_gateway.update(auth_session)
             await self._auth_transaction_manager.commit()
 
-        except DataMapperError as error:
-            log.error("%s: '%s'", AUTH_SESSION_EXTENSION_FAILED, error)
+        except DataMapperError as err:
+            log.error("%s: '%s'", AUTH_SESSION_EXTENSION_FAILED, err)
             auth_session.expiration = original_expiration
             return auth_session
 

@@ -15,8 +15,8 @@ from app.infrastructure.auth.exceptions import (
 from app.infrastructure.auth.handlers.constants import (
     AUTH_ACCOUNT_INACTIVE,
     AUTH_ALREADY_AUTHENTICATED,
+    AUTH_PASSWORD_INVALID,
 )
-from app.infrastructure.auth.session.constants import AUTH_INVALID_PASSWORD
 from app.infrastructure.auth.session.service import AuthSessionService
 
 log = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class LogInHandler:
         user_command_gateway: UserCommandGateway,
         user_service: UserService,
         auth_session_service: AuthSessionService,
-    ):
+    ) -> None:
         self._current_user_service = current_user_service
         self._user_command_gateway = user_command_gateway
         self._user_service = user_service
@@ -59,8 +59,9 @@ class LogInHandler:
         :raises AlreadyAuthenticatedError:
         :raises AuthorizationError:
         :raises DataMapperError:
-        :raises DomainFieldError:
+        :raises DomainTypeError:
         :raises UserNotFoundByUsernameError:
+        :raises PasswordHasherBusyError:
         :raises AuthenticationError:
         """
         log.info("Log in: started. Username: '%s'.", request_data.username)
@@ -78,8 +79,8 @@ class LogInHandler:
         if user is None:
             raise UserNotFoundByUsernameError(username)
 
-        if not self._user_service.is_password_valid(user, password):
-            raise AuthenticationError(AUTH_INVALID_PASSWORD)
+        if not await self._user_service.is_password_valid(user, password):
+            raise AuthenticationError(AUTH_PASSWORD_INVALID)
 
         if not user.is_active:
             raise AuthenticationError(AUTH_ACCOUNT_INACTIVE)

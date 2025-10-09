@@ -19,11 +19,12 @@ from tests.app.unit.factories.value_objects import (
 )
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "role",
     [UserRole.USER, UserRole.ADMIN],
 )
-def test_creates_active_user_with_hashed_password(
+async def test_creates_active_user_with_hashed_password(
     role: UserRole,
     user_id_generator: MagicMock,
     password_hasher: MagicMock,
@@ -35,12 +36,12 @@ def test_creates_active_user_with_hashed_password(
     expected_id = create_user_id()
     expected_hash = create_password_hash()
 
-    user_id_generator.return_value = expected_id.value
-    password_hasher.hash.return_value = expected_hash.value
+    user_id_generator.generate.return_value = expected_id
+    password_hasher.hash.return_value = expected_hash
     sut = UserService(user_id_generator, password_hasher)
 
     # Act
-    result = sut.create_user(username, raw_password, role)
+    result = await sut.create_user(username, raw_password, role)
 
     # Assert
     assert isinstance(result, User)
@@ -51,29 +52,22 @@ def test_creates_active_user_with_hashed_password(
     assert result.is_active is True
 
 
-def test_creates_inactive_user_if_specified(
+@pytest.mark.asyncio
+async def test_creates_inactive_user_if_specified(
     user_id_generator: MagicMock,
     password_hasher: MagicMock,
 ) -> None:
-    # Arrange
     username = create_username()
     raw_password = create_raw_password()
-
-    expected_id = create_user_id()
-    expected_hash = create_password_hash()
-
-    user_id_generator.return_value = expected_id.value
-    password_hasher.hash.return_value = expected_hash.value
     sut = UserService(user_id_generator, password_hasher)
 
-    # Act
-    result = sut.create_user(username, raw_password, is_active=False)
+    result = await sut.create_user(username, raw_password, is_active=False)
 
-    # Assert
     assert not result.is_active
 
 
-def test_fails_to_create_user_with_unassignable_role(
+@pytest.mark.asyncio
+async def test_fails_to_create_user_with_unassignable_role(
     user_id_generator: MagicMock,
     password_hasher: MagicMock,
 ) -> None:
@@ -82,18 +76,19 @@ def test_fails_to_create_user_with_unassignable_role(
     sut = UserService(user_id_generator, password_hasher)
 
     with pytest.raises(RoleAssignmentNotPermittedError):
-        sut.create_user(
+        await sut.create_user(
             username=username,
             raw_password=raw_password,
             role=UserRole.SUPER_ADMIN,
         )
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "is_valid",
     [True, False],
 )
-def test_checks_password_authenticity(
+async def test_checks_password_authenticity(
     is_valid: bool,
     user_id_generator: MagicMock,
     password_hasher: MagicMock,
@@ -106,13 +101,14 @@ def test_checks_password_authenticity(
     sut = UserService(user_id_generator, password_hasher)
 
     # Act
-    result = sut.is_password_valid(user, raw_password)
+    result = await sut.is_password_valid(user, raw_password)
 
     # Assert
     assert result is is_valid
 
 
-def test_changes_password(
+@pytest.mark.asyncio
+async def test_changes_password(
     user_id_generator: MagicMock,
     password_hasher: MagicMock,
 ) -> None:
@@ -122,31 +118,39 @@ def test_changes_password(
     raw_password = create_raw_password()
 
     expected_hash = create_password_hash(b"new")
-    password_hasher.hash.return_value = expected_hash.value
+    password_hasher.hash.return_value = expected_hash
     sut = UserService(user_id_generator, password_hasher)
 
     # Act
-    sut.change_password(user, raw_password)
+    await sut.change_password(user, raw_password)
 
     # Assert
     assert user.password_hash == expected_hash
 
 
 @pytest.mark.parametrize(
-    "is_active",
-    [True, False],
+    ("initial_state", "target_state", "expected_result"),
+    [
+        pytest.param(True, False, True, id="active_to_inactive"),
+        pytest.param(False, True, True, id="inactive_to_active"),
+        pytest.param(True, True, False, id="already_active"),
+        pytest.param(False, False, False, id="already_inactive"),
+    ],
 )
 def test_toggles_activation_state(
-    is_active: bool,
+    initial_state: bool,
+    target_state: bool,
+    expected_result: bool,
     user_id_generator: MagicMock,
     password_hasher: MagicMock,
 ) -> None:
-    user = create_user(is_active=not is_active)
+    user = create_user(is_active=initial_state)
     sut = UserService(user_id_generator, password_hasher)
 
-    sut.toggle_user_activation(user, is_active=is_active)
+    result = sut.toggle_user_activation(user, is_active=target_state)
 
-    assert user.is_active is is_active
+    assert result is expected_result
+    assert user.is_active is target_state
 
 
 @pytest.mark.parametrize(
@@ -168,20 +172,29 @@ def test_preserves_super_admin_activation_state(
 
 
 @pytest.mark.parametrize(
-    "is_admin",
-    [True, False],
+    ("initial_role", "target_is_admin", "expected_role", "expected_result"),
+    [
+        pytest.param(UserRole.USER, True, UserRole.ADMIN, True, id="user_to_admin"),
+        pytest.param(UserRole.ADMIN, False, UserRole.USER, True, id="admin_to_user"),
+        pytest.param(UserRole.USER, False, UserRole.USER, False, id="already_user"),
+        pytest.param(UserRole.ADMIN, True, UserRole.ADMIN, False, id="already_admin"),
+    ],
 )
 def test_toggles_role(
-    is_admin: bool,
+    initial_role: UserRole,
+    target_is_admin: bool,
+    expected_role: UserRole,
+    expected_result: bool,
     user_id_generator: MagicMock,
     password_hasher: MagicMock,
 ) -> None:
-    user = create_user()
+    user = create_user(role=initial_role)
     sut = UserService(user_id_generator, password_hasher)
 
-    sut.toggle_user_admin_role(user, is_admin=is_admin)
+    result = sut.toggle_user_admin_role(user, is_admin=target_is_admin)
 
-    assert user.role == UserRole.ADMIN if is_admin else UserRole.USER
+    assert result is expected_result
+    assert user.role == expected_role
 
 
 @pytest.mark.parametrize(

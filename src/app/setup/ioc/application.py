@@ -1,11 +1,11 @@
 from dishka import Provider, Scope, provide, provide_all
 
 from app.application.commands.activate_user import ActivateUserInteractor
-from app.application.commands.change_password import ChangePasswordInteractor
 from app.application.commands.create_user import CreateUserInteractor
 from app.application.commands.deactivate_user import DeactivateUserInteractor
 from app.application.commands.grant_admin import GrantAdminInteractor
 from app.application.commands.revoke_admin import RevokeAdminInteractor
+from app.application.commands.set_user_password import SetUserPasswordInteractor
 from app.application.common.ports.access_revoker import AccessRevoker
 from app.application.common.ports.flusher import Flusher
 from app.application.common.ports.identity_provider import IdentityProvider
@@ -40,38 +40,20 @@ class ApplicationProvider(Provider):
         CurrentUserService,
     )
 
-    # Ports Auth
-    access_revoker = provide(
-        source=AuthSessionAccessRevoker,
-        provides=AccessRevoker,
-    )
-    identity_provider = provide(
-        source=AuthSessionIdentityProvider,
-        provides=IdentityProvider,
-    )
-
     # Ports Persistence
-    tx_manager = provide(
-        source=SqlaMainTransactionManager,
-        provides=TransactionManager,
-    )
-    flusher = provide(
-        source=SqlaMainFlusher,
-        provides=Flusher,
-    )
-    user_command_gateway = provide(
-        source=SqlaUserDataMapper,
-        provides=UserCommandGateway,
-    )
-    user_query_gateway = provide(
-        source=SqlaUserReader,
-        provides=UserQueryGateway,
-    )
+    tx_manager = provide(SqlaMainTransactionManager, provides=TransactionManager)
+    flusher = provide(SqlaMainFlusher, provides=Flusher)
+    user_command_gateway = provide(SqlaUserDataMapper, provides=UserCommandGateway)
+    user_query_gateway = provide(SqlaUserReader, provides=UserQueryGateway)
+
+    # Ports Auth
+    access_revoker = provide(AuthSessionAccessRevoker, provides=AccessRevoker)
+    identity_provider = provide(AuthSessionIdentityProvider, provides=IdentityProvider)
 
     # Commands
     commands = provide_all(
         ActivateUserInteractor,
-        ChangePasswordInteractor,
+        SetUserPasswordInteractor,
         CreateUserInteractor,
         DeactivateUserInteractor,
         GrantAdminInteractor,

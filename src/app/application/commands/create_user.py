@@ -50,7 +50,7 @@ class CreateUserInteractor:
         user_command_gateway: UserCommandGateway,
         flusher: Flusher,
         transaction_manager: TransactionManager,
-    ):
+    ) -> None:
         self._current_user_service = current_user_service
         self._user_service = user_service
         self._user_command_gateway = user_command_gateway
@@ -62,14 +62,12 @@ class CreateUserInteractor:
         :raises AuthenticationError:
         :raises DataMapperError:
         :raises AuthorizationError:
-        :raises DomainFieldError:
+        :raises DomainTypeError:
+        :raises PasswordHasherBusyError:
         :raises RoleAssignmentNotPermittedError:
         :raises UsernameAlreadyExistsError:
         """
-        log.info(
-            "Create user: started. Username: '%s'.",
-            request_data.username,
-        )
+        log.info("Create user: started. Target username: '%s'.", request_data.username)
 
         current_user = await self._current_user_service.get_current_user()
 
@@ -83,7 +81,9 @@ class CreateUserInteractor:
 
         username = Username(request_data.username)
         password = RawPassword(request_data.password)
-        user = self._user_service.create_user(username, password, request_data.role)
+        user = await self._user_service.create_user(
+            username, password, request_data.role
+        )
 
         self._user_command_gateway.add(user)
 
@@ -94,5 +94,5 @@ class CreateUserInteractor:
 
         await self._transaction_manager.commit()
 
-        log.info("Create user: done. Username: '%s'.", user.username.value)
+        log.info("Create user: done. Target username: '%s'.", user.username.value)
         return CreateUserResponse(id=user.id_.value)

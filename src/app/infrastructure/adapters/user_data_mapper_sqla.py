@@ -11,7 +11,7 @@ from app.infrastructure.exceptions.gateway import DataMapperError
 
 
 class SqlaUserDataMapper(UserCommandGateway):
-    def __init__(self, session: MainAsyncSession):
+    def __init__(self, session: MainAsyncSession) -> None:
         self._session = session
 
     def add(self, user: User) -> None:
@@ -19,12 +19,19 @@ class SqlaUserDataMapper(UserCommandGateway):
         try:
             self._session.add(user)
 
-        except SQLAlchemyError as error:
-            raise DataMapperError(DB_QUERY_FAILED) from error
+        except SQLAlchemyError as err:
+            raise DataMapperError(DB_QUERY_FAILED) from err
 
-    async def read_by_id(self, user_id: UserId) -> User | None:
+    async def read_by_id(
+        self,
+        user_id: UserId,
+        for_update: bool = False,
+    ) -> User | None:
         """:raises DataMapperError:"""
         select_stmt: Select[tuple[User]] = select(User).where(User.id_ == user_id)  # type: ignore
+
+        if for_update:
+            select_stmt = select_stmt.with_for_update()
 
         try:
             user: User | None = (
@@ -33,8 +40,8 @@ class SqlaUserDataMapper(UserCommandGateway):
 
             return user
 
-        except SQLAlchemyError as error:
-            raise DataMapperError(DB_QUERY_FAILED) from error
+        except SQLAlchemyError as err:
+            raise DataMapperError(DB_QUERY_FAILED) from err
 
     async def read_by_username(
         self,
@@ -54,5 +61,5 @@ class SqlaUserDataMapper(UserCommandGateway):
 
             return user
 
-        except SQLAlchemyError as error:
-            raise DataMapperError(DB_QUERY_FAILED) from error
+        except SQLAlchemyError as err:
+            raise DataMapperError(DB_QUERY_FAILED) from err
