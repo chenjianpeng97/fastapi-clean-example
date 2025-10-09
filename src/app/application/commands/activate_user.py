@@ -66,7 +66,7 @@ class ActivateUserInteractor:
 
         authorize(
             CanManageRole(),
-            context=RoleManagementContext(
+            context=+(
                 subject=current_user,
                 target_role=UserRole.USER,
             ),
