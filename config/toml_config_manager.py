@@ -38,19 +38,26 @@ def validate_logging_level(*, level: str) -> LoggingLevel:
         raise ValueError(f"Invalid log level: '{level}'.") from err
 
 
-def configure_logging(*, level: LoggingLevel = DEFAULT_LOG_LEVEL) -> None:
-    logging.getLogger().handlers.clear()
+FMT: Final[str] = (
+    "[%(asctime)s.%(msecs)03d] "
+    "[%(threadName)s] "
+    "%(funcName)20s "
+    "%(module)s:%(lineno)d "
+    "%(levelname)-8s - "
+    "%(message)s"
+)
+DATEFMT: Final[str] = "%Y-%m-%d %H:%M:%S"
 
+
+def configure_logging(
+    *,
+    level: LoggingLevel = DEFAULT_LOG_LEVEL,
+) -> None:
     logging.basicConfig(
-        level=getattr(logging, level),
-        datefmt="%Y-%m-%d %H:%M:%S",
-        format=(
-            "[%(asctime)s.%(msecs)03d] "
-            "%(funcName)20s "
-            "%(module)s:%(lineno)d "
-            "%(levelname)-8s - "
-            "%(message)s"
-        ),
+        level=level,
+        datefmt=DATEFMT,
+        format=FMT,
+        force=True,
     )
 
 
@@ -139,8 +146,8 @@ def read_config(
         raise FileNotFoundError(
             f"The file does not exist at the specified path: {file_path}",
         )
-    with open(file=file_path, mode="r", encoding="utf-8") as f:
-        return tomllib.loads(f.read())
+    with file_path.open(mode="rb") as f:
+        return tomllib.load(f)
 
 
 def merge_dicts(*, dict1: ConfigDict, dict2: ConfigDict) -> ConfigDict:
@@ -224,12 +231,7 @@ def get_env_value_by_export_field(*, config: ConfigDict, field: str) -> str:
             f"got {type(current).__name__}",
         )
 
-    try:
-        return str(current)
-    except (TypeError, ValueError) as err:
-        raise ValueError(
-            f"Field '{field}' cannot be converted to string: {err!s}"
-        ) from err
+    return str(current)
 
 
 # DOTENV GENERATION
@@ -257,8 +259,11 @@ def write_dotenv_file(
     body = [f"{key}={value}" for key, value in exported_fields.items()]
     body.append("")
 
-    with open(dotenv_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(header + body))
+    dotenv_path.write_text(
+        data="\n".join(header + body),
+        encoding="utf-8",
+        newline="\n",
+    )
 
     log.info(
         "Dotenv for environment '%s' was successfully generated at '%s'! ✨",
