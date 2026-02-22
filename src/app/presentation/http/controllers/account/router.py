@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.presentation.http.controllers.account.change_password import (
     create_change_password_router,
 )
+from app.presentation.http.controllers.account.get_me import create_get_me_router
 from app.presentation.http.controllers.account.log_in import create_log_in_router
 from app.presentation.http.controllers.account.log_out import (
     create_log_out_router,
@@ -19,6 +20,7 @@ def create_account_router() -> APIRouter:
     )
     router.include_router(create_sign_up_router())
     router.include_router(create_log_in_router())
+    router.include_router(create_get_me_router())
     router.include_router(create_change_password_router())
     router.include_router(create_log_out_router())
     return router
