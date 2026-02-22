@@ -18,7 +18,7 @@ def make_app(
 
     configure_logging(level=settings.logs.level)
 
-    app: FastAPI = create_web_app()
+    app: FastAPI = create_web_app(settings)
     container = create_ioc_container(settings, *di_providers)
     setup_dishka(container, app)
 
