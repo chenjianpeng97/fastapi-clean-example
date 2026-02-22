@@ -8,7 +8,7 @@ DRIVER = "psycopg"
 # Uvicorn
 [uvicorn]
 HOST = "0.0.0.0"
-PORT = 9999
+PORT = 8000
 
 # SQLAlchemy
 [sqla]
@@ -41,3 +41,9 @@ HASHER_WORK_FACTOR = 11
 HASHER_MAX_THREADS = 8
 # Fail-fast cap: max semaphore wait before timeout (start ~1 second, tune to peak)
 HASHER_SEMAPHORE_WAIT_TIMEOUT_S = 1.0
+
+[cors]
+ALLOW_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+ALLOW_CREDENTIALS = true
+ALLOW_METHODS = ["*"]
+ALLOW_HEADERS = ["*"]

@@ -2,6 +2,7 @@ from pydantic import (
     BaseModel,
 )
 
+from app.setup.config.cors import CorsSettings
 from app.setup.config.database import PostgresSettings, SqlaEngineSettings
 from app.setup.config.loader import ValidEnvs, get_current_env, load_full_config
 from app.setup.config.logs import LoggingSettings
@@ -13,6 +14,7 @@ class AppSettings(BaseModel):
     sqla: SqlaEngineSettings
     security: SecuritySettings
     logs: LoggingSettings
+    cors: CorsSettings
 
 
 def load_settings(env: ValidEnvs | None = None) -> AppSettings:

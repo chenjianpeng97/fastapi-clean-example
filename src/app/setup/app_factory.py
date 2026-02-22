@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from dishka import AsyncContainer, Provider, make_async_container
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
 from app.infrastructure.persistence_sqla.mappings.all import map_tables
@@ -25,13 +26,21 @@ def create_ioc_container(
     )
 
 
-def create_web_app() -> FastAPI:
+def create_web_app(settings: AppSettings) -> FastAPI:
     app = FastAPI(
         lifespan=lifespan,
         default_response_class=ORJSONResponse,
     )
     # https://github.com/encode/starlette/discussions/2451
     app.add_middleware(ASGIAuthMiddleware)
+    # CORSMiddleware must be added last so it is outermost (runs before auth)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors.allow_origins,
+        allow_credentials=settings.cors.allow_credentials,
+        allow_methods=settings.cors.allow_methods,
+        allow_headers=settings.cors.allow_headers,
+    )
     # Good place to register global exception handlers
     app.include_router(create_root_router())
     return app
